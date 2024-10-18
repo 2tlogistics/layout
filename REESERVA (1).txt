@@ -1,0 +1,11 @@
+{
+  "nombre": "PK",
+  "correo": "KPKP@GMAIL.COM",
+  "telefono": "KPKP",
+  "asientos": [
+    "701",
+    "733",
+    "854"
+  ],
+  "total": 300
+}
