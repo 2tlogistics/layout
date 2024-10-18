@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiesta de Fin de Año 2025</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        #seat-map {
+            display: grid;
+            grid-template-columns: repeat(30, 30px);
+            grid-gap: 5px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .seat {
+            width: 30px;
+            height: 30px;
+            background-color: #B9DEA0;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .seat.selected {
+            background-color: #E6CAC4;
+        }
+
+        .seat.reserved {
+            background-color: #472B34;
+            cursor: not-allowed;
+        }
+
+        .seat-number {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Fiesta de Fin de Año 2025</h1>
+    <div id="seat-map"></div>
+    <form id="reservation-form">
+        <label for="name">Nombre:</label>
+        <input type="text" id="name" name="name" required><br><br>
+        <label for="email">Correo Electrónico:</label>
+        <input type="email" id="email" name="email" required><br><br>
+        <label for="phone">Teléfono:</label>
+        <input type="tel" id="phone" name="phone" required><br><br>
+        <button type="button" onclick="calculateTotal()">Calcular Monto</button>
+    </form>
+    <div id="ticket"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const seatMap = document.getElementById('seat-map');
+            const form = document.getElementById('reservation-form');
+            const ticketDiv = document.getElementById('ticket');
+            let selectedSeats = [];
+
+            // Crear cuadrícula de 30x30 para los asientos
+            for (let i = 0; i < 900; i++) {
+                const seat = document.createElement('div');
+                seat.classList.add('seat');
+                seat.dataset.seatNumber = i + 1;
+                seat.innerHTML = `<span class="seat-number">${i + 1}</span>`;
+                seat.addEventListener('click', () => selectSeat(seat));
+                seatMap.appendChild(seat);
+            }
+
+            function selectSeat(seat) {
+                if (!seat.classList.contains('reserved')) {
+                    seat.classList.toggle('selected');
+                    const seatNumber = seat.dataset.seatNumber;
+                    if (seat.classList.contains('selected')) {
+                        selectedSeats.push(seatNumber);
+                    } else {
+                        selectedSeats = selectedSeats.filter(s => s !== seatNumber);
+                    }
+                }
+            }
+
+            window.calculateTotal = function() {
+                const name = form.name.value;
+                const email = form.email.value;
+                const phone = form.phone.value;
+                if (selectedSeats.length === 0 || !name || !email || !phone) {
+                    alert('Por favor, seleccione asientos y complete su información.');
+                    return;
+                }
+
+                const totalAmount = selectedSeats.length * 100; // Precio fijo de $100 por asiento
+                const ticketData = {
+                    nombre: name,
+                    correo: email,
+                    telefono: phone,
+                    asientos: selectedSeats,
+                    total: totalAmount
+                };
+
+                // Guardar datos en archivo JSON
+                saveToFile(ticketData);
+
+                // Generar código QR
+                const qr = new QRious({
+                    value: JSON.stringify(ticketData),
+                    size: 150
+                });
+
+                ticketDiv.innerHTML = `
+                    <h2>Ticket de Reserva</h2>
+                    <p>Nombre: ${name}</p>
+                    <p>Correo: ${email}</p>
+                    <p>Teléfono: ${phone}</p>
+                    <p>Asientos: ${selectedSeats.join(', ')}</p>
+                    <p>Total: $${totalAmount}</p>
+                    <img src="${qr.toDataURL()}" alt="Código QR">
+                    <button onclick="printTicket()">Imprimir Ticket</button>
+                `;
+
+                // Marcar los asientos como reservados
+                selectedSeats.forEach(seatNumber => {
+                    const seat = document.querySelector(`.seat[data-seat-number='${seatNumber}']`);
+                    seat.classList.remove('selected');
+                    seat.classList.add('reserved');
+                });
+
+                // Limpiar la selección
+                selectedSeats = [];
+                form.reset();
+            }
+
+            function saveToFile(data) {
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'REESERVA.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            window.printTicket = function() {
+                const printContents = ticketDiv.innerHTML;
+                const originalContents = document.body.innerHTML;
+                document.body.innerHTML = printContents;
+                window.print();
+                document.body.innerHTML = originalContents;
+            }
+
+            // Funciones CRUD
+            window.createRecord = function(data) {
+                const records = readRecords();
+                records.push(data);
+                writeRecords(records);
+            }
+
+            window.readRecords = function() {
+                try {
+                    const file = new XMLHttpRequest();
+                    file.open("GET", "REESERVA.txt", false);
+                    file.send(null);
+                    return JSON.parse(file.responseText);
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            window.updateRecord = function(index, newData) {
+                const records = readRecords();
+                records[index] = newData;
+                writeRecords(records);
+            }
+
+            window.deleteRecord = function(index) {
+                const records = readRecords();
+                records.splice(index, 1);
+                writeRecords(records);
+            }
+
+            function writeRecords(records) {
+                const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'REESERVA.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        });
+    </script>
+</body>
+</html>
