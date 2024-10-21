@@ -1,0 +1,15 @@
+{
+  "nombre": "JORGE TOLEDO",
+  "correo": "KPKP@GMAIL.COM",
+  "telefono": "66666",
+  "asientos": [
+    "103",
+    "104",
+    "105",
+    "106",
+    "107",
+    "135",
+    "136"
+  ],
+  "total": 700
+}
